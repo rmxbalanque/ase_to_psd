@@ -39,7 +39,8 @@ endif ()
 
 # Set sources/includes
 set(ATP_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/atp_converter.cpp)
+set(ATP_HEADERS /src/aseprite.h /scr/parser.h)
 add_executable(atp_converter ${ATP_SOURCES})
 
-# Set itp include dirs
-target_include_directories(atp_converter PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/rapidjson/include/")
+# Set ATP include dirs
+target_include_directories(atp_converter PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/psd_sdk/src/")
