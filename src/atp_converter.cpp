@@ -9,10 +9,13 @@
 
 #include "Psd/PsdDocument.h"
 
-#include "aseprite.h"
+#include "ase_to_psd/decoder.h"
 
 int main(void) 
 {
+    Aseprite::Decoder myDecoder;
+   auto temp = *myDecoder.parse("./input.ase");
+   temp.m_Layers.size();
 }
 
 // TODO: Add doctest

@@ -5,28 +5,12 @@
 #define ASE_TO_PSD_ASEPRITE_H
 #pragma once
 
-#include <cstdint>
+#include "ase_to_psd/io_types.h"
 #include <vector>
 #include <fstream>
 
 namespace Aseprite
 {
-    // .ase file data types
-    using byte_t = std::uint8_t;
-    using word_t = std::uint16_t;
-    using short_t = std::int16_t;
-    using dword_t = std::uint32_t;
-    using long_t = std::int32_t;
-    using fixed_t = std::int32_t;
-    using string_t = std::string;
-
-    union pixel_t
-    {
-        byte_t m_Indexed;
-        byte_t m_Grayscale[2];
-        byte_t m_RGBA[4];
-    };
-
     enum class Modes
     {
         Indexed = 1,
@@ -34,23 +18,23 @@ namespace Aseprite
         RGBA = 4,
     };
 
-    enum class Chunks
-    {
-        OldPaletteA = 0x0004,
-        OldPaletteB = 0x0011,
-        Layer = 0x2004,
-        Cel = 0x2005,
-        CelExtra = 0x2006,
-        Mask = 0x2016,
-        Path = 0x2017,
-        FrameTags = 0x2018,
-        Palette = 0x2019,
-        UserData = 0x2020,
-        Slice = 0x2022
-    };
-
     struct Chunk
     {
+        enum class Type : word_t
+        {
+            OldPaletteA = 0x0004,
+            OldPaletteB = 0x0011,
+            Layer = 0x2004,
+            Cel = 0x2005,
+            CelExtra = 0x2006,
+            Mask = 0x2016,
+            Path = 0x2017,
+            FrameTags = 0x2018,
+            Palette = 0x2019,
+            UserData = 0x2020,
+            Slice = 0x2022
+        };
+
         // User data.
     };
 
@@ -62,7 +46,7 @@ namespace Aseprite
             Editable = 2,
             LockMovement = 4,
             Background = 8,
-            PreferLinkedCels = 16,
+            PreferLinkedCells = 16,
             DisplayLayerGroupCollapsed = 32,
             ReferenceLayer = 64,
         };
@@ -192,6 +176,7 @@ namespace Aseprite
      */
     class File
     {
+    public: // Temporal
         enum class Flags : dword_t
         {
             LayerOpacityIsValid = 1,
@@ -212,6 +197,7 @@ namespace Aseprite
         word_t m_GridWidth;     //!< Grid width (Zero if there is no grid, grid size is 16x16 on Aseprite by default)
         word_t m_GridHeight;    //!< Grid height (Zero if there is no grid)
 
+        Modes m_ColorMode;
         std::vector<Frame> m_Frames;    //!< Frame container
         std::vector<Layer> m_Layers;    //!< Layer container
         std::vector<Slice> m_Slices;    //!< Slices container

@@ -38,9 +38,11 @@ endif ()
 # -----------------------------------------------------------------------------
 
 # Set sources/includes
-set(ATP_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/atp_converter.cpp)
-set(ATP_HEADERS /src/aseprite.h /scr/parser.h)
+set(ATP_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/atp_converter.cpp include/ase_to_psd/decoder.h include/ase_to_psd/io_types.h src/decoder.cpp)
+set(ATP_HEADERS /include/ase_to_psd/aseprite.h /scr/parser.h)
 add_executable(atp_converter ${ATP_SOURCES})
 
+configure_file("./input/Forest_Pack_(1).ase" "${CMAKE_BINARY_DIR}/input.ase" COPYONLY)
+
 # Set ATP include dirs
-target_include_directories(atp_converter PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/psd_sdk/src/")
+target_include_directories(atp_converter PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/psd_sdk/src/" "${CMAKE_CURRENT_SOURCE_DIR}/include/")
