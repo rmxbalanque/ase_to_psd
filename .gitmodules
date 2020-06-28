@@ -1,3 +1,6 @@
 [submodule "thirdparty/psd_sdk"]
 	path = thirdparty/psd_sdk
 	url = https://github.com/MolecularMatters/psd_sdk.git
+[submodule "thirdparty/zlib"]
+	path = thirdparty/zlib
+	url = https://github.com/madler/zlib.git

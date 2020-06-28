@@ -15,7 +15,7 @@ set(ATP_VERSION
         ${ATP_MAJOR_VERSION}.${ATP_MINOR_VERSION}.${ATP_PATCH_VERSION})
 
 # Start project
-project(ase_to_psd VERSION ${ATP_VERSION} LANGUAGES CXX)
+project(ase_to_psd VERSION ${ATP_VERSION} LANGUAGES CXX C)
 message(STATUS "Build ase_to_psd: ${PROJECT_VERSION}")
 
 # Setup module subdirectory.
@@ -41,8 +41,13 @@ endif ()
 set(ATP_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/atp_converter.cpp include/ase_to_psd/decoder.h include/ase_to_psd/io_types.h src/decoder.cpp)
 set(ATP_HEADERS /include/ase_to_psd/aseprite.h /scr/parser.h)
 add_executable(atp_converter ${ATP_SOURCES})
+target_compile_features(atp_converter PRIVATE cxx_std_17)
 
 configure_file("./input/Forest_Pack_(1).ase" "${CMAKE_BINARY_DIR}/input.ase" COPYONLY)
 
 # Set ATP include dirs
 target_include_directories(atp_converter PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/psd_sdk/src/" "${CMAKE_CURRENT_SOURCE_DIR}/include/")
+
+# Miniz Library
+add_subdirectory("thirdparty/zlib/")
+target_link_libraries(atp_converter PRIVATE zlibstatic)

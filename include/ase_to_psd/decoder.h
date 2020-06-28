@@ -43,6 +43,7 @@ namespace Aseprite
 
             // Properly parsed/magic number matches.
             bool m_Good;
+            size_t m_StartPos;
         };
 
         struct FrameHeader
@@ -55,6 +56,7 @@ namespace Aseprite
 
             // Properly parsed/magic number matches
             bool m_Good;
+            size_t m_StartPos;
         };
 
         struct ChunkHeader
@@ -62,11 +64,17 @@ namespace Aseprite
             // Chunk header data.
             dword_t m_Size;
             Chunk::Type m_Type;
+            size_t m_StartPos;
         };
 
         // Data.
         std::string m_Path;
-        std::ifstream m_AseFilestream;
+        std::ifstream m_AseFileStream;
+        PixelFormat m_PixelFormat;
+
+        // Decompression
+        // for cel.
+        Cel::raw_image_t decompress_cel_data(const Cel::compressed_image_t & image);
 
         // TODO: Use move semantics when copying values around.
         // IO Type reading.
@@ -74,18 +82,21 @@ namespace Aseprite
         T read()
         {
             T buffer;
-            m_AseFilestream.read(reinterpret_cast<char *>(&buffer), 1);
+            m_AseFileStream.read(reinterpret_cast<char *>(&buffer), 1);
 
-            if (m_AseFilestream && !m_AseFilestream.eof())
+            if (m_AseFileStream && !m_AseFileStream.eof())
                 return buffer;
 
             return 0;
         }
 
+        template<typename T>
+        T read(const ChunkHeader & chunkHeader);
+
         template<typename T, size_t n = sizeof(T)>
         T read(char *buf)
         {
-            m_AseFilestream.read(buf, n);
+            m_AseFileStream.read(buf, n);
         }
 
         template<>
@@ -107,6 +118,9 @@ namespace Aseprite
         long_t read<long_t>();
 
         template<>
+        pixel_t read<pixel_t>();
+
+        template<>
         FileHeader read<FileHeader>();
 
         template<>
@@ -117,6 +131,9 @@ namespace Aseprite
 
         template<>
         Layer read<Layer>();
+
+        template<>
+        Cel read<Cel>(const ChunkHeader & chunkHeader);
     };
 }
 #endif //ASE_TO_PSD_DECODER_H

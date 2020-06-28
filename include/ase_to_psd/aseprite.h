@@ -8,10 +8,11 @@
 #include "ase_to_psd/io_types.h"
 #include <vector>
 #include <fstream>
+#include <variant>
 
 namespace Aseprite
 {
-    enum class Modes
+    enum class PixelFormat
     {
         Indexed = 1,
         Grayscale = 2,
@@ -46,7 +47,7 @@ namespace Aseprite
             Editable = 2,
             LockMovement = 4,
             Background = 8,
-            PreferLinkedCells = 16,
+            PreferLinkedCels = 16,
             DisplayLayerGroupCollapsed = 32,
             ReferenceLayer = 64,
         };
@@ -104,7 +105,18 @@ namespace Aseprite
         Type m_Type;
 
         // TODO: Use union or std::variant
+
+        // Width, Height, Raw Image Data.
+        using raw_image_t = std::tuple<word_t, word_t, std::vector<pixel_t>>;
+        // Width, Height, ZLib Compressed Image Data.
+        using compressed_image_t = std::tuple<word_t, word_t, std::vector<byte_t>>;
+        // Frame position to link with.
+        using linked_cel_t = word_t;
+
+        std::variant<raw_image_t , compressed_image_t, linked_cel_t> m_TypeData;
+
         // Raw / Compressed Image
+       /*
         word_t m_Width;
         word_t m_Height;
 
@@ -113,12 +125,13 @@ namespace Aseprite
 
         // Linked cel
         word_t m_FramePos;
+        */
     };
 
     struct Frame
     {
         word_t m_Duration;
-        std::vector<Cel> m_Cells;
+        std::vector<Cel> m_Cels;
     };
 
     struct Tag
@@ -197,7 +210,7 @@ namespace Aseprite
         word_t m_GridWidth;     //!< Grid width (Zero if there is no grid, grid size is 16x16 on Aseprite by default)
         word_t m_GridHeight;    //!< Grid height (Zero if there is no grid)
 
-        Modes m_ColorMode;
+        PixelFormat m_ColorMode;
         std::vector<Frame> m_Frames;    //!< Frame container
         std::vector<Layer> m_Layers;    //!< Layer container
         std::vector<Slice> m_Slices;    //!< Slices container

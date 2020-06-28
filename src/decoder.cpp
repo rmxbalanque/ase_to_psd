@@ -4,6 +4,9 @@
 #include "ase_to_psd/decoder.h"
 #include <utility>
 
+// TODO: Remove!
+#include <iostream>
+
 #define ASEFILE_MAGIC 0xA5E0
 #define ASEFRAME_MAGIC 0xF1FA
 
@@ -16,58 +19,84 @@ namespace Aseprite
     std::unique_ptr<File> Aseprite::Decoder::parse(const std::string &path)
     {
         m_Path = path;
-        m_AseFilestream.open(m_Path, std::ios_base::in | std::ios_base::binary);
+        m_AseFileStream.open(m_Path, std::ios_base::in | std::ios_base::binary);
 
-        if (m_AseFilestream)
+        if (m_AseFileStream)
         {
             auto asedoc = std::make_unique<File>();
 
             // Parse header.
-            const auto fileHeader(read<FileHeader>());
+            const auto file_header(read<FileHeader>());
 
-            if (fileHeader.m_Good)
+            if (file_header.m_Good)
             {
-                for (word_t cf = 0; cf < fileHeader.m_FrameCount; ++cf)
+                // Set decoder pixel format.
+                m_PixelFormat = file_header.m_ColorDepth == 32 ? PixelFormat::RGBA : (file_header.m_ColorDepth == 16
+                                                                                     ? PixelFormat::Grayscale
+                                                                                     : PixelFormat::Indexed);
+
+                for (word_t cf = 0; cf < file_header.m_FrameCount; ++cf)
                 {
-                    const size_t frame_start_pos = m_AseFilestream.tellg();
-                    const auto frameHeader(read<FrameHeader>());
-                    m_AseFilestream.seekg(frame_start_pos + 16);
+                    const auto frame_header(read<FrameHeader>());
+                    m_AseFileStream.seekg(frame_header.m_StartPos + 16);
 
-                    if (frameHeader.m_Good)
+                    if (frame_header.m_Good)
                     {
-                        for (word_t cc = 0; cc < frameHeader.m_ChunkCount; ++cc)
-                        {
-                            const size_t chunk_start_pos = m_AseFilestream.tellg();
-                            const auto chunkHeader(read<ChunkHeader>());
+                        // Create new frame.
+                        Frame newFrame;
+                        newFrame.m_Duration = frame_header.m_Duration;
+                        asedoc->m_Frames.push_back(newFrame);
 
-                            switch (chunkHeader.m_Type)
+                        // Read chunks in frame.
+                        for (word_t cc = 0; cc < frame_header.m_ChunkCount; ++cc)
+                        {
+                            const auto chunk_header(read<ChunkHeader>());
+
+                            switch (chunk_header.m_Type)
                             {
                                 case Chunk::Type::OldPaletteA:
+                                    std::cout << "Old Palette A Read!" << "\n";
                                     break;
                                 case Chunk::Type::OldPaletteB:
+                                    std::cout << "Old Palette B Read!" << "\n";
                                     break;
                                 case Chunk::Type::Layer:
-                                    asedoc->m_Layers.emplace_back(read<Layer>());
+                                    std::cout << "Layer Read!" << "\n";
+                                    asedoc->m_Layers.push_back(read<Layer>());
                                     break;
                                 case Chunk::Type::Cel:
+                                    std::cout << "Cel Read!" << "\n";
+                                    asedoc->m_Frames[asedoc->m_Frames.size() - 1].m_Cels.push_back(read<Cel>(chunk_header));
+                                    if (asedoc->m_Frames[asedoc->m_Frames.size() - 1].m_Cels.back().m_TypeData.index() == 1)
+                                    {
+                                        decompress_cel_data(std::get<1>(asedoc->m_Frames[asedoc->m_Frames.size() - 1].m_Cels.back().m_TypeData));
+                                        exit(0);
+                                    }
                                     break;
                                 case Chunk::Type::CelExtra:
+                                    std::cout << "Cel Extra Read!" << "\n";
                                     break;
                                 case Chunk::Type::Mask:
+                                    std::cout << "Mask Read!" << "\n";
                                     break;
                                 case Chunk::Type::Path:
+                                    std::cout << "Path Read!" << "\n";
                                     break;
                                 case Chunk::Type::FrameTags:
+                                    std::cout << "Frame Read!" << "\n";
                                     break;
                                 case Chunk::Type::Palette:
+                                    std::cout << "Palette Read!" << "\n";
                                     break;
                                 case Chunk::Type::UserData:
+                                    std::cout << "User Data Read!" << "\n";
                                     break;
                                 case Chunk::Type::Slice:
+                                    std::cout << "Slice Read!" << "\n";
                                     break;
                             }
 
-                            m_AseFilestream.seekg(chunk_start_pos + chunkHeader.m_Size);
+                            m_AseFileStream.seekg(chunk_header.m_StartPos + chunk_header.m_Size);
                         }
                     }
                 }
@@ -76,7 +105,32 @@ namespace Aseprite
             }
         }
 
-        return nullptr;
+        return std::unique_ptr<File>{};
+    }
+
+    ///////////////////////////////////////////////////////////////////////////
+    // Decompression
+    ///////////////////////////////////////////////////////////////////////////
+
+    Cel::raw_image_t Decoder::decompress_cel_data(const Cel::compressed_image_t &image)
+    {
+
+
+        auto & [width, height, srcData] = image;
+        std::cout << width << ", " << height << std::endl;
+
+        std::vector<pixel_t> outBuf(width * height);
+
+        std::fstream out("./raw_uncompressed_image_data.txt", std::ios_base::out | std::ios_base::binary);
+        if (out)
+        {
+            for (const auto byte : outBuf)
+            {
+                out << byte.m_RGBA;
+            }
+            out.close();
+        }
+        return std::make_tuple(width, height, outBuf);
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -86,9 +140,9 @@ namespace Aseprite
     template<>
     byte_t Decoder::read<byte_t>()
     {
-        int val = m_AseFilestream.get();
+        int val = m_AseFileStream.get();
 
-        if (!m_AseFilestream.eof())
+        if (!m_AseFileStream.eof())
             return val;
 
         return 0;
@@ -100,7 +154,7 @@ namespace Aseprite
         auto a = read<byte_t>();
         auto b = read<byte_t>();
 
-        if (!m_AseFilestream.eof())
+        if (!m_AseFileStream.eof())
             return ((b << 8) | a);
         else
             return 0;
@@ -114,7 +168,7 @@ namespace Aseprite
         int c = read<byte_t>();
         int d = read<byte_t>();
 
-        if (!m_AseFilestream.eof())
+        if (!m_AseFileStream.eof())
             return ((d << 24) | (c << 16) | (b << 8) | a);
         else
             return 0;
@@ -125,7 +179,7 @@ namespace Aseprite
     {
         const auto len = read<word_t>();
         string_t str(len, '\0');
-        m_AseFilestream.read(&str[0], len);
+        m_AseFileStream.read(&str[0], len);
         // TODO: Check end of file.
         return str;
     }
@@ -148,10 +202,10 @@ namespace Aseprite
     template<>
     Decoder::FileHeader Decoder::read<Decoder::FileHeader>()
     {
-        FileHeader aseHeader;
+        FileHeader aseHeader{};
 
         // Initial values.
-        size_t start_pos = m_AseFilestream.tellg();
+        aseHeader.m_StartPos = m_AseFileStream.tellg();
         aseHeader.m_Size = read<dword_t>();
         aseHeader.m_MagicNumber = read<word_t>();
 
@@ -187,19 +241,20 @@ namespace Aseprite
         if (aseHeader.m_ColorCount == 0) aseHeader.m_ColorCount = 256;
 
         // Skip 84 bytes and start at the frame data section.
-        m_AseFilestream.seekg(start_pos + 128);
+        m_AseFileStream.seekg(aseHeader.m_StartPos + 128);
 
         // Valid file header read.
-        aseHeader.m_Good = m_AseFilestream.good();
+        aseHeader.m_Good = m_AseFileStream.good();
         return aseHeader;
     }
 
     template<>
     Decoder::FrameHeader Decoder::read<Decoder::FrameHeader>()
     {
-        FrameHeader frameHeader;
+        FrameHeader frameHeader{};
 
         // Get initial data.
+        frameHeader.m_StartPos = m_AseFileStream.tellg();
         frameHeader.m_Size = read<dword_t>();
         frameHeader.m_MagicNumber = read<word_t>();
 
@@ -223,16 +278,42 @@ namespace Aseprite
         if (frameHeader.m_ChunkCount == 0xFFFF && frameHeader.m_ChunkCount < new_chunk_count)
             frameHeader.m_ChunkCount = new_chunk_count;
 
-        frameHeader.m_Good = m_AseFilestream.good();
+        frameHeader.m_Good = m_AseFileStream.good();
         return frameHeader;
+    }
+
+    template<>
+    pixel_t Decoder::read<pixel_t>()
+    {
+        pixel_t pixel{};
+
+        switch (m_PixelFormat)
+        {
+            case PixelFormat::Indexed:
+                pixel.m_Indexed = read<byte_t>();
+                break;
+            case PixelFormat::Grayscale:
+                pixel.m_Grayscale[0] = read<byte_t>();
+                pixel.m_Grayscale[1] = read<byte_t>();
+                break;
+            case PixelFormat::RGBA:
+                pixel.m_RGBA[0] = read<byte_t>();
+                pixel.m_RGBA[1] = read<byte_t>();
+                pixel.m_RGBA[2] = read<byte_t>();
+                pixel.m_RGBA[3] = read<byte_t>();
+                break;
+        }
+
+        return pixel;
     }
 
     template<>
     Decoder::ChunkHeader Decoder::read<Decoder::ChunkHeader>()
     {
-        ChunkHeader chunkHeader;
+        ChunkHeader chunkHeader{};
 
         // Get initial data.
+        chunkHeader.m_StartPos = m_AseFileStream.tellg();
         chunkHeader.m_Size = read<dword_t>();
         chunkHeader.m_Type = static_cast<Chunk::Type>(read<word_t>());
         return chunkHeader;
@@ -241,7 +322,7 @@ namespace Aseprite
     template<>
     Layer Decoder::read<Layer>()
     {
-        Layer layer;
+        Layer layer{};
 
         // Read data.
         layer.m_Flags = static_cast<Layer::Flags>(read<word_t>());
@@ -260,5 +341,74 @@ namespace Aseprite
         // Read name.
         layer.m_Name = read<string_t>();
         return layer;
+    }
+
+    template<>
+    Cel Decoder::read<Cel>(const ChunkHeader & chunkHeader)
+    {
+        Cel cel{};
+
+        // Chunk header pos.
+        const size_t chunk_data_start_pos = m_AseFileStream.tellg();
+
+        // Read data.
+        cel.m_LayerIndex = read<word_t>();
+        cel.m_X = read<short_t>();
+        cel.m_Y = read<short_t>();
+        cel.m_Opacity = read<byte_t>();
+        cel.m_Type = static_cast<Cel::Type>(read<word_t>());
+        std::cout << "Cel type" << static_cast<int>(cel.m_Type) << std::endl;
+        // Padding bytes. (TODO: Use padding function)
+        read<byte_t>();
+        read<byte_t>();
+        read<byte_t>();
+        read<byte_t>();
+        read<byte_t>();
+        read<byte_t>();
+        read<byte_t>();
+
+        // Read type data.
+        switch (cel.m_Type)
+        {
+            case Cel::Type::Raw:
+            {
+                auto&[width, height, bytes] = std::get<Cel::raw_image_t>(cel.m_TypeData);
+                width = read<word_t>();
+                height = read<word_t>();
+                bytes.reserve(width * height);
+
+                // TODO: Use iterators! For now using push_back to make it work.
+                for (int i = 0; i < width * height; ++i)
+                {
+                    bytes.push_back(read<pixel_t>());
+                }
+            }
+                break;
+
+            case Cel::Type::Linked:
+            {
+                cel.m_TypeData = Cel::linked_cel_t{};
+                std::get<Cel::linked_cel_t>(cel.m_TypeData) = read<word_t>();
+            }
+                break;
+
+            case Cel::Type::CompressedImage:
+            {
+                cel.m_TypeData = Cel::compressed_image_t{};
+                auto&[width, height, bytes] = std::get<Cel::compressed_image_t>(cel.m_TypeData);
+                width = read<word_t>();
+                height = read<word_t>();
+                bytes.reserve(width * height * static_cast<size_t>(m_PixelFormat));
+
+                // TODO: Use iterators! For now using push_back to make it work.
+                for (int i = 0; i < chunkHeader.m_Size - (chunkHeader.m_StartPos - chunk_data_start_pos); ++i)
+                {
+                    bytes.push_back(read<byte_t>());
+                }
+            }
+                break;
+        }
+
+        return cel;
     }
 }
