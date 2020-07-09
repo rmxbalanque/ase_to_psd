@@ -104,8 +104,6 @@ namespace Aseprite
         byte_t m_Opacity;
         Type m_Type;
 
-        // TODO: Use union or std::variant
-
         // Width, Height, Raw Image Data.
         using raw_image_t = std::tuple<word_t, word_t, std::vector<pixel_t>>;
         // Width, Height, ZLib Compressed Image Data.
@@ -113,19 +111,8 @@ namespace Aseprite
         // Frame position to link with.
         using linked_cel_t = word_t;
 
-        std::variant<raw_image_t , compressed_image_t, linked_cel_t> m_TypeData;
-
-        // Raw / Compressed Image
-       /*
-        word_t m_Width;
-        word_t m_Height;
-
-        // Raw = Pixels / Compressed Image = Byte
-        std::vector<byte_t> m_Data;
-
-        // Linked cel
-        word_t m_FramePos;
-        */
+        // Cel extra data.
+        std::variant<raw_image_t , linked_cel_t, compressed_image_t> m_TypeData;
     };
 
     struct Frame

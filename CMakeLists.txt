@@ -43,7 +43,7 @@ set(ATP_HEADERS /include/ase_to_psd/aseprite.h /scr/parser.h)
 add_executable(atp_converter ${ATP_SOURCES})
 target_compile_features(atp_converter PRIVATE cxx_std_17)
 
-configure_file("./input/Forest_Pack_(1).ase" "${CMAKE_BINARY_DIR}/input.ase" COPYONLY)
+configure_file("./input/input2.ase" "${CMAKE_BINARY_DIR}/input.ase" COPYONLY)
 
 # Set ATP include dirs
 target_include_directories(atp_converter PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/psd_sdk/src/" "${CMAKE_CURRENT_SOURCE_DIR}/include/")
@@ -51,3 +51,5 @@ target_include_directories(atp_converter PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/thi
 # Miniz Library
 add_subdirectory("thirdparty/zlib/")
 target_link_libraries(atp_converter PRIVATE zlibstatic)
+target_include_directories(atp_converter PRIVATE "thirdparty/zlib")
+target_include_directories(atp_converter PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/thirdparty/zlib/")

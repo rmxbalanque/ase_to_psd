@@ -3,6 +3,7 @@
 
 #include "ase_to_psd/decoder.h"
 #include <utility>
+#include <zlib.h>
 
 // TODO: Remove!
 #include <iostream>
@@ -67,11 +68,13 @@ namespace Aseprite
                                 case Chunk::Type::Cel:
                                     std::cout << "Cel Read!" << "\n";
                                     asedoc->m_Frames[asedoc->m_Frames.size() - 1].m_Cels.push_back(read<Cel>(chunk_header));
-                                    if (asedoc->m_Frames[asedoc->m_Frames.size() - 1].m_Cels.back().m_TypeData.index() == 1)
+
+                                    // Compressed data.
+                                    /*if (asedoc->m_Frames[asedoc->m_Frames.size() - 1].m_Cels.back().m_TypeData.index() == static_cast<int>(Cel::Type::CompressedImage))
                                     {
-                                        decompress_cel_data(std::get<1>(asedoc->m_Frames[asedoc->m_Frames.size() - 1].m_Cels.back().m_TypeData));
-                                        exit(0);
-                                    }
+                                        decompress_cel_data(std::get<Cel::compressed_image_t>(asedoc->m_Frames[asedoc->m_Frames.size() - 1].m_Cels.back().m_TypeData));
+                                        //exit(0);
+                                    }*/
                                     break;
                                 case Chunk::Type::CelExtra:
                                     std::cout << "Cel Extra Read!" << "\n";
@@ -96,6 +99,7 @@ namespace Aseprite
                                     break;
                             }
 
+                            // Start at the beginning of next chunk data.
                             m_AseFileStream.seekg(chunk_header.m_StartPos + chunk_header.m_Size);
                         }
                     }
@@ -114,14 +118,22 @@ namespace Aseprite
 
     Cel::raw_image_t Decoder::decompress_cel_data(const Cel::compressed_image_t &image)
     {
-
-
         auto & [width, height, srcData] = image;
         std::cout << width << ", " << height << std::endl;
 
         std::vector<pixel_t> outBuf(width * height);
+        uLongf tempSize = outBuf.size() * sizeof(pixel_t);
+        int inflate_result = uncompress(reinterpret_cast<Bytef *>(outBuf.data()), &tempSize, reinterpret_cast<const Bytef *>(srcData.data()), srcData.size());
 
-        std::fstream out("./raw_uncompressed_image_data.txt", std::ios_base::out | std::ios_base::binary);
+        switch(inflate_result)
+        {
+            case Z_OK: std::cout << "Decompressed successfully!" << std::endl; break;
+            case Z_MEM_ERROR: std::cout << "Decompressed memory error!" << std::endl; break;
+            case Z_BUF_ERROR: std::cout << "Decompressed buffer error!" << std::endl; break;
+            case Z_DATA_ERROR: std::cout << "Decompressed data error!" << std::endl; break;
+        }
+
+        /*std::fstream out("./raw_uncompressed_image_data.txt", std::ios_base::out | std::ios_base::binary);
         if (out)
         {
             for (const auto byte : outBuf)
@@ -129,7 +141,7 @@ namespace Aseprite
                 out << byte.m_RGBA;
             }
             out.close();
-        }
+        }*/
         return std::make_tuple(width, height, outBuf);
     }
 
@@ -358,6 +370,7 @@ namespace Aseprite
         cel.m_Opacity = read<byte_t>();
         cel.m_Type = static_cast<Cel::Type>(read<word_t>());
         std::cout << "Cel type" << static_cast<int>(cel.m_Type) << std::endl;
+
         // Padding bytes. (TODO: Use padding function)
         read<byte_t>();
         read<byte_t>();
