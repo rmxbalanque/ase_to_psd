@@ -129,6 +129,8 @@ namespace Aseprite
         template<>
         ChunkHeader read<ChunkHeader>();
 
+        // Chunk types
+
         template<>
         Layer read<Layer>();
 

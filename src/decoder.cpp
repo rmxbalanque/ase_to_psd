@@ -14,7 +14,7 @@
 namespace Aseprite
 {
     ///////////////////////////////////////////////////////////////////////////
-    // Decoder
+    // Decoder ////////////////////////////////////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////
 
     std::unique_ptr<File> Aseprite::Decoder::parse(const std::string &path)
@@ -31,6 +31,22 @@ namespace Aseprite
 
             if (file_header.m_Good)
             {
+                // Set file variables.
+                asedoc->m_Size          = file_header.m_Size        ;
+                asedoc->m_FrameCount    = file_header.m_FrameCount  ;
+                asedoc->m_Width         = file_header.m_Width       ;
+                asedoc->m_Height        = file_header.m_Height      ;
+                asedoc->m_ColorDepth    = file_header.m_ColorDepth  ;
+                asedoc->m_Flags         = static_cast<File::Flags>(file_header.m_Flags);
+                asedoc->m_PaletteEntry  = file_header.m_PaletteEntry;
+                asedoc->m_ColorCount    = file_header.m_ColorCount  ;
+                asedoc->m_PixelWidth    = file_header.m_PixelWidth  ;
+                asedoc->m_PixelHeight   = file_header.m_PixelHeight ;
+                asedoc-> m_GridX        = file_header. m_GridX      ;
+                asedoc-> m_GridY        = file_header. m_GridY      ;
+                asedoc->m_GridWidth     = file_header.m_GridWidth   ;
+                asedoc->m_GridHeight    = file_header.m_GridHeight  ;
+
                 // Set decoder pixel format.
                 m_PixelFormat = file_header.m_ColorDepth == 32 ? PixelFormat::RGBA : (file_header.m_ColorDepth == 16
                                                                                      ? PixelFormat::Grayscale
@@ -146,7 +162,7 @@ namespace Aseprite
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    /// IO Reading
+    // IO Reading /////////////////////////////////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////
 
     template<>
@@ -195,8 +211,6 @@ namespace Aseprite
         // TODO: Check end of file.
         return str;
     }
-
-    // TODO: Read pixel_t
 
     // Conversions.
 #define DECODER_READ_CONVERSION_SPECIALIZATION(from_, to_)\

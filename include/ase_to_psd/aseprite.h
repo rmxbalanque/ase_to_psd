@@ -19,6 +19,11 @@ namespace Aseprite
         RGBA = 4,
     };
 
+    ///////////////////////////////////////////////////////////////////////////
+    // Data Chunk Types ///////////////////////////////////////////////////////
+    ///////////////////////////////////////////////////////////////////////////
+
+    // Base type
     struct Chunk
     {
         enum class Type : word_t
@@ -37,9 +42,14 @@ namespace Aseprite
         };
 
         // User data.
+        std::string m_Text;
+        byte_t m_Color[4];
     };
 
-    struct Layer
+    // Old palette 0x0004
+    // Old palette 0x0011
+
+    struct Layer : Chunk
     {
         enum class Flags : word_t
         {
@@ -89,7 +99,7 @@ namespace Aseprite
         string_t m_Name;
     };
 
-    struct Cel
+    struct Cel : Chunk
     {
         enum class Type : word_t
         {
@@ -98,30 +108,27 @@ namespace Aseprite
             CompressedImage,
         };
 
-        word_t m_LayerIndex;
-        short_t m_X;
-        short_t m_Y;
-        byte_t m_Opacity;
-        Type m_Type;
+        word_t m_LayerIndex = 0;
+        short_t m_X = 0;
+        short_t m_Y = 0;
+        byte_t m_Opacity = 0;
+        Type m_Type = Type::Raw;
 
         // Width, Height, Raw Image Data.
         using raw_image_t = std::tuple<word_t, word_t, std::vector<pixel_t>>;
-        // Width, Height, ZLib Compressed Image Data.
-        using compressed_image_t = std::tuple<word_t, word_t, std::vector<byte_t>>;
         // Frame position to link with.
         using linked_cel_t = word_t;
+        // Width, Height, ZLib Compressed Image Data.
+        using compressed_image_t = std::tuple<word_t, word_t, std::vector<byte_t>>;
 
         // Cel extra data.
         std::variant<raw_image_t , linked_cel_t, compressed_image_t> m_TypeData;
     };
 
-    struct Frame
-    {
-        word_t m_Duration;
-        std::vector<Cel> m_Cels;
-    };
+    // Cel extra chunk 0x2006
+    // Color profile chunk 0x2007
 
-    struct Tag
+    struct Tag : Chunk
     {
         enum class LoopAnimationDir : byte_t
         {
@@ -137,7 +144,7 @@ namespace Aseprite
         string_t m_Name;
     };
 
-    struct Slice
+    struct Slice : Chunk
     {
         enum class Flags : dword_t
         {
@@ -171,6 +178,16 @@ namespace Aseprite
 
     // TODO: Old Palette A, B, and New Palette Chunk
 
+    ///////////////////////////////////////////////////////////////////////////
+    // Other files ////////////////////////////////////////////////////////////
+    ///////////////////////////////////////////////////////////////////////////
+
+    struct Frame
+    {
+        word_t m_Duration;
+        std::vector<Cel> m_Cels;
+    };
+
     /*!
      * \brief Aseprite document object.
      */
@@ -197,7 +214,7 @@ namespace Aseprite
         word_t m_GridWidth;     //!< Grid width (Zero if there is no grid, grid size is 16x16 on Aseprite by default)
         word_t m_GridHeight;    //!< Grid height (Zero if there is no grid)
 
-        PixelFormat m_ColorMode;
+        PixelFormat m_ColorMode;        //!< Pixel format
         std::vector<Frame> m_Frames;    //!< Frame container
         std::vector<Layer> m_Layers;    //!< Layer container
         std::vector<Slice> m_Slices;    //!< Slices container
