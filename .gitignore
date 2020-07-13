@@ -44,6 +44,7 @@ Thumbs.db
 /.vs/
 /.idea/
 /build/
-/thirdparty/
+/thirdparty/psd_sdk/
+/thirdparty/zlib/
 /psd_sdk_documentation/
 /input/

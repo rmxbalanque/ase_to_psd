@@ -3,50 +3,58 @@
 
 
 #include <iostream>
+#include "ase_to_psd/converter.h"
+#include "cxxopts.hpp"
 
-#include "Psd/Psd.h"
-#include "Psd/PsdPlatform.h"
-
-#include "Psd/PsdMallocAllocator.h"
-#include "Psd/PsdNativeFile.h"
-
-#include "Psd/PsdDocument.h"
-#include "Psd/PsdColorMode.h"
-#include "Psd/PsdLayer.h"
-#include "Psd/PsdChannel.h"
-#include "Psd/PsdChannelType.h"
-#include "Psd/PsdLayerMask.h"
-#include "Psd/PsdVectorMask.h"
-#include "Psd/PsdLayerMaskSection.h"
-#include "Psd/PsdImageDataSection.h"
-#include "Psd/PsdImageResourcesSection.h"
-#include "Psd/PsdParseDocument.h"
-#include "Psd/PsdParseLayerMaskSection.h"
-#include "Psd/PsdParseImageDataSection.h"
-#include "Psd/PsdParseImageResourcesSection.h"
-#include "Psd/PsdLayerCanvasCopy.h"
-#include "Psd/PsdInterleave.h"
-#include "Psd/PsdPlanarImage.h"
-#include "Psd/PsdExport.h"
-#include "Psd/PsdExportDocument.h"
-#include "debugapi.h"
-#include "../psd_sdk/src/Samples/PsdTgaExporter.h"
-#include "../psd_sdk/src/Samples/PsdTgaExporter.cpp"
-
-#include "ase_to_psd/decoder.h"
-PSD_PUSH_WARNING_LEVEL(0)
-// disable annoying warning caused by xlocale(337): warning C4530: C++ exception handler used, but unwind semantics are not enabled. Specify /EHsc
-#pragma warning(disable:4530)
-#include <string>
-#include <sstream>
-PSD_POP_WARNING_LEVEL
-
-PSD_USING_NAMESPACE;
-
-int main(int argc, const char * argv[])
+int main(int argc, char * argv[])
 {
+    // CLI ////////////////////////////////////////////////////////////////////
+
+    // Program
+    cxxopts::Options cli_options{"ATP_Coverter", "Aseprite to Photoshop file converter"};
+
+    // Options
+    cli_options.allow_unrecognised_options().add_options()
+    ("help", "Print help")
+    ("i,input", "Input file path", cxxopts::value<std::string>())
+    ("o,output", "Output file path", cxxopts::value<std::string>())
+    ("f,frame", "Aseprite frame to convert to Photoshop file", cxxopts::value<unsigned int>())
+    ("v,verbose", "Verbose output", cxxopts::value<bool>()->default_value("true"))
+    ("c,construct", "Constructs Aseprite file from Photoshop file", cxxopts::value<bool>()->default_value("false"));
+
+    // Parse positional arguments
+    cli_options.parse_positional({"input", "output"});
+    auto result = cli_options.parse(argc, argv);
+
+    // No arguments provided
+    if (result.arguments().empty())
+    {
+        std::cout << cli_options.help() << std::endl;
+        exit(0);
+    }
+
+    // Interpret options/arguments
+    if (result.count("help"))
+    {
+        std::cout << cli_options.help() << std::endl;
+        exit(0);
+    }
+
+    if (result.count("input") && result.count("output"))
+    {
+        return Aseprite::Convert(result["input"].as<std::string>(), result["output"].as<std::string>(), result["construct"].as<bool>());
+    }
+    else
+    {
+        if (!result.count("input")) std::cout << "ERROR: Missing input filepath" << std::endl;
+        if (!result.count("output")) std::cout << "ERROR: Missing output filepath" << std::endl;
+        return 0;
+    }
+
+    // TODO: Wrap in try catch
+    ///////////////////////////////////////////////////////////////////////////
     // Decode aseprite file
-    Aseprite::Decoder decoder;
+    /*Aseprite::Decoder decoder;
     auto aseprite_file = *decoder.parse("./input.ase");
 
     // Encode to photoshop file
@@ -72,7 +80,6 @@ int main(int argc, const char * argv[])
     for (const auto & layer : aseprite_file.m_Layers)
     {
         auto index = psd::AddLayer(psd_document, &allocator, layer.m_Name.c_str());
-        psd_document->layers
     }
 
     // Add cel image data.
@@ -121,6 +128,7 @@ int main(int argc, const char * argv[])
 
     psd::DestroyExportDocument(psd_document, &allocator);
     file.Close();
+    return 0;*/
     return 0;
 }
 
